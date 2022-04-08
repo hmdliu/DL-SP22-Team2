@@ -110,7 +110,7 @@ def main(args):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
     dataset_train = UnlabeledDataset(root='/unlabeled', transform=transform_train)
     sampler_train = torch.utils.data.RandomSampler(dataset_train)
-    print(dataset_train)
+    print('dataset size:', len(dataset_train))
 
     if args.log_dir is not None:
         os.makedirs(args.log_dir, exist_ok=True)

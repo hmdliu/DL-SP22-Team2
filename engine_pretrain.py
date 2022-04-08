@@ -6,7 +6,7 @@ import torch
 
 import utils
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, 
+def train_one_epoch(model, data_loader, optimizer, device, epoch, 
                     loss_scaler, log_writer=None, args=None):
 
     model.train()
