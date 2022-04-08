@@ -1,0 +1,15 @@
+*.DS_Store
+*.json
+*.swp
+*.pth.tar
+*.pth
+*.log
+*.out
+*.err
+*.txt
+*.yaml
+*.zip
+*.csv
+*.pickle
+*.pyc
+*.xml
