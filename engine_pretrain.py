@@ -7,14 +7,14 @@ import torch
 import utils
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, 
-                    loss_scaler, print_freq, log_writer=None, args=None):
+                    loss_scaler, log_writer=None, args=None):
 
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
     
-    print_freq = 20
+    print_freq = 1000
     accum_iter = args.accum_iter
 
     optimizer.zero_grad()
