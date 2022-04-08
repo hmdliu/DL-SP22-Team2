@@ -21,7 +21,7 @@ def train_one_epoch(model, data_loader, optimizer, device, epoch,
     if log_writer is not None:
         print('log_dir: {}'.format(log_writer.log_dir))
 
-    for data_iter_step, (samples, _) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for data_iter_step, samples in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
 
         # per iteration lr scheduler
         if data_iter_step % accum_iter == 0:
@@ -31,9 +31,9 @@ def train_one_epoch(model, data_loader, optimizer, device, epoch,
 
         with torch.cuda.amp.autocast():
             loss, _, _ = model(samples, mask_ratio=args.mask_ratio)
+            loss = torch.mean(loss)
 
         loss_value = loss.item()
-
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             sys.exit(1)
