@@ -4,12 +4,12 @@
 #SBATCH --account=csci_ga_2572_2022sp_02
 
 #SBATCH --job-name=torch
-#SBATCH --partition=n1s16-v100-2
-#SBATCH --cpus-per-task=16
-#SBATCH --gres=gpu:2
+#SBATCH --partition=n1c24m128-v100-4
+#SBATCH --cpus-per-task=24
+#SBATCH --gres=gpu:4
 #SBATCH --mem=32GB
 
-#SBATCH --time=04:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --output=mae-base-200.out
 #SBATCH --error=mae-base-200.err
 #SBATCH --exclusive
