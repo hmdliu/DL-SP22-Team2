@@ -54,7 +54,7 @@ def get_args_parser():
                         help='learning rate (absolute lr)')
     parser.add_argument('--blr', type=float, default=1.5e-4, metavar='LR',
                         help='base learning rate: absolute_lr = base_lr * total_batch_size / 256')
-    parser.add_argument('--min_lr', type=float, default=0., metavar='LR',
+    parser.add_argument('--min_lr', type=float, default=1e-8, metavar='LR',
                         help='lower lr bound for cyclic schedulers that hit 0')
     parser.add_argument('--warmup_epochs', type=int, default=20, metavar='N',
                         help='epochs to warmup LR')
@@ -138,8 +138,9 @@ def main(args):
     print("effective batch size: %d" % eff_batch_size)
     
     # data parallel
-    model = torch.nn.DataParallel(model, device_ids=[i for i in range(torch.cuda.device_count())])
-    model_without_ddp = model.module
+    if torch.cuda.device_count() > 1:
+        model = torch.nn.DataParallel(model, device_ids=[i for i in range(torch.cuda.device_count())])
+        model_without_ddp = model.module
 
     # following timm: set wd as 0 for bias and norm layers
     param_groups = optim_factory.add_weight_decay(model_without_ddp, args.weight_decay)

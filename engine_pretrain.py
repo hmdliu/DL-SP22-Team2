@@ -14,7 +14,7 @@ def train_one_epoch(model, data_loader, optimizer, device, epoch,
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
     header = 'Epoch: [{}]'.format(epoch)
     
-    print_freq = 1000
+    print_freq = 500
     accum_iter = args.accum_iter
 
     optimizer.zero_grad()
