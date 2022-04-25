@@ -168,7 +168,7 @@ class LabeledDataset(torch.utils.data.Dataset):
             yamlfile = yaml.load(f, Loader=yaml.FullLoader)
 
         num_objs = len(yamlfile['labels'])
-        #xmin, ymin, xmax, ymax
+        # xmin, ymin, xmax, ymax
         boxes = torch.as_tensor(yamlfile['bboxes'], dtype=torch.float32)
         labels = []
         for label in yamlfile['labels']:
