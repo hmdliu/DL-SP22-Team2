@@ -4,6 +4,7 @@
 
 import os
 import sys
+import pdb
 import numpy as np
 from collections import OrderedDict
 
@@ -86,7 +87,6 @@ def get_model(num_classes, checkpoint_path):
 
 def main():
     
-    bs = 2 * torch.cuda.device_count()
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     seed = 42
@@ -96,10 +96,10 @@ def main():
     num_classes = 100
     exp_id, num_epochs, checkpoint_path = sys.argv[1], int(sys.argv[2]), os.path.abspath(sys.argv[3])
     train_dataset = LabeledDataset(root='/labeled', split="training", transforms=get_transform(train=True))
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=bs, shuffle=True, num_workers=bs, collate_fn=utils.collate_fn)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_dataset = LabeledDataset(root='/labeled', split="validation", transforms=get_transform(train=False))
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=bs, shuffle=False, num_workers=bs, collate_fn=utils.collate_fn)
-    print(f'exp_id={exp_id}; seed={seed}; batch_size={bs}; num_epochs={num_epochs}; device={device}.')
+    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=2, collate_fn=utils.collate_fn)
+    print(f'exp_id={exp_id}; seed={seed}; batch_size=2; num_epochs={num_epochs}; device={device}.')
 
     # checkpoint_path = '/scratch/hl3797/DL-S2022/Deep-Learning-S22/checkpoints/mae-base-80.pth'
     model = get_model(num_classes, checkpoint_path)
@@ -107,10 +107,15 @@ def main():
     model.to(device)
     print(model)
 
-    # data parallel
-    if torch.cuda.device_count() > 1:
-        model = torch.nn.DataParallel(model, device_ids=[i for i in range(torch.cuda.device_count())])
-        model_without_ddp = model.module
+    # freeze the backbone (if needed)
+    for p in model.backbone.backbone.parameters():
+        p.requires_grad = False    
+    # pdb.set_trace()
+
+    # # data parallel
+    # if torch.cuda.device_count() > 1:
+    #     model = torch.nn.DataParallel(model, device_ids=[i for i in range(torch.cuda.device_count())])
+    #     model_without_ddp = model.module
 
     params = [p for p in model.parameters() if p.requires_grad]
     # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
