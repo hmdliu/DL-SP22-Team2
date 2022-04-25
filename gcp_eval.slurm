@@ -13,20 +13,14 @@
 #SBATCH --requeue
 
 # exp setting
-checkpoint_path=$1
-
-# # copy the dataset
-# mkdir /tmp/$USER
-# export SINGULARITY_CACHEDIR=/tmp/$USER
-# cp -rp /scratch/DL22SP/labeled.sqsh /tmp
-# echo "Dataset is copied to /tmp"
+exp_id=$1
+checkpoint_path=$2
 
 # evaluation
 singularity exec --nv \
 --bind /scratch \
 --overlay /scratch/hl3797/conda.ext3:ro \
 --overlay /scratch/DL22SP/labeled.sqsh \
-# --overlay /tmp/labeled.sqsh \
 /share/apps/images/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
 /bin/bash -c "
 source /ext3/env.sh
