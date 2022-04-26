@@ -13,6 +13,40 @@ from collections import defaultdict, deque
 import torch
 import torch.distributed as dist
 
+def split_params(m, decayed_lr=1e-4, kw_list=['norm', 'bias']):
+    without_kw, with_kw = split_params_by_keywords(m, kw_list)
+    return [
+        {'params': with_kw, 'lr': decayed_lr, 'weight_decay': 0.0},
+        {'params': without_kw, 'lr': decayed_lr}
+    ]
+
+def split_params_by_keywords(m, kw_list):
+    without_kw, with_kw = [], []
+    for n, p in m.named_parameters():
+        if all([n.find(kw) == -1 for kw in kw_list]):
+            without_kw.append(p)
+        else:
+            with_kw.append(p)
+    return without_kw, with_kw
+
+def get_params(model, mode='none', lr=1e-4):
+    assert mode in ('decay', 'freeze', 'none')
+    if mode == 'none':
+        return [p for p in model.parameters() if p.requires_grad]
+    elif mode == 'freeze':
+        for p in model.backbone.backbone.parameters():
+            p.requires_grad = False
+        return [p for p in model.parameters() if p.requires_grad]
+    else:
+        backbone_ids = list(map(id, model.backbone.backbone.parameters()))
+        other_params = filter(lambda p: id(p) not in backbone_ids, model.parameters())
+        param_groups = [{'params': other_params, 'lr': lr}]
+        param_groups.append({'params': model.backbone.backbone.norm.parameters(), 'lr': lr, 'weight_decay': 0.0})
+        for i in range(11, -1, -1):
+            param_groups += split_params(model.backbone.backbone.blocks[i], decayed_lr=lr * (0.7 ** (12 - i)))
+        param_groups += split_params(model.backbone.backbone.patch_embed, decayed_lr=lr * (0.7 ** 13))
+        param_groups.append({'params': model.backbone.backbone.pos_embed, 'lr': lr * (0.7 ** 13), 'weight_decay': 0.0})
+        return param_groups
 
 # --------------------------------------------------------
 # Interpolate position embeddings for high-resolution
@@ -422,7 +456,6 @@ def warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor):
         return warmup_factor * (1 - alpha) + alpha
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, f)
-
 
 def mkdir(path):
     try:

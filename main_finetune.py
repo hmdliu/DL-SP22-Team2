@@ -31,6 +31,7 @@ def get_transform(train):
     transforms = []
     transforms.append(T.ToTensor())
     if train:
+        transforms.append(T.Jitter())
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
 
@@ -64,11 +65,10 @@ def get_model(num_classes, checkpoint_path):
     model = FasterRCNN(
         backbone=backbone_with_fpn,
         num_classes=num_classes,
-        # rpn_anchor_generator=AnchorGenerator(
-        #     # sizes=((128, 64), (64, 32), (32, 16), (16, 8), (8, 4)),
-        #     sizes=((512,), (256,), (128,), (64,), (32,)),
-        #     aspect_ratios=((0.5, 1.0, 2.0),) * 5
-        # ),
+        rpn_anchor_generator=AnchorGenerator(
+            sizes=((16,), (32,), (64,), (128,), (256,)),
+            aspect_ratios=((0.5, 1.0, 2.0),) * 5
+        ),
         box_roi_pool=MultiScaleRoIAlign(
             featmap_names=["0", "1", "2", "3", "pool"],
             output_size=8,
@@ -93,8 +93,12 @@ def main():
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    if len(sys.argv) == 1:
+        exp_id, num_epochs, checkpoint_path = 'test', 1, './checkpoints/pretrain-mae-base-80.pth'
+    else:
+        exp_id, num_epochs, checkpoint_path = sys.argv[1], int(sys.argv[2]), os.path.abspath(sys.argv[3])
+
     num_classes = 100
-    exp_id, num_epochs, checkpoint_path = sys.argv[1], int(sys.argv[2]), os.path.abspath(sys.argv[3])
     train_dataset = LabeledDataset(root='/labeled', split="training", transforms=get_transform(train=True))
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_dataset = LabeledDataset(root='/labeled', split="validation", transforms=get_transform(train=False))
@@ -107,20 +111,9 @@ def main():
     model.to(device)
     print(model)
 
-    # freeze the backbone (if needed)
-    for p in model.backbone.backbone.parameters():
-        p.requires_grad = False    
-    # pdb.set_trace()
-
-    # # data parallel
-    # if torch.cuda.device_count() > 1:
-    #     model = torch.nn.DataParallel(model, device_ids=[i for i in range(torch.cuda.device_count())])
-    #     model_without_ddp = model.module
-
-    params = [p for p in model.parameters() if p.requires_grad]
-    # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
-    optimizer = torch.optim.AdamW(params, lr=1e-4)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    optimizer = torch.optim.AdamW(utils.get_params(model, mode='decay'), lr=1e-4)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+    # print('optimizer:', optimizer)
 
     for epoch in range(num_epochs):
         # train for one epoch, printing every 10 iterations

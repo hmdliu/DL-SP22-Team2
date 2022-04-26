@@ -1,6 +1,7 @@
 import random
 import torch
 
+from torchvision.transforms import ColorJitter
 from torchvision.transforms import functional as F
 
 
@@ -43,6 +44,17 @@ class RandomHorizontalFlip(object):
                 target["keypoints"] = keypoints
         return image, target
 
+class Jitter(object):
+    def __init__(self):
+        self.jitter = ColorJitter(
+            brightness=[0.1, 2.0],
+            contrast=[0.1, 2.0],
+            saturation=[0.1, 2.0],
+            hue=[-0.1, 0.1]
+        )
+    
+    def __call__(self, image, target):
+        return self.jitter(image), target
 
 class ToTensor(object):
     def __call__(self, image, target):
