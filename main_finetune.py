@@ -26,6 +26,16 @@ import utils
 import transforms as T
 from dataset import UnlabeledDataset, LabeledDataset
 
+if len(sys.argv) == 1:
+    EXP_ID = 'test'
+    NUM_EPOCHS = 1
+    CHECKPOINT_TYPE = 'pretrained'
+    CHECKPOINT_PATH = './checkpoints/pretrain-mae-base-80.pth'
+else:
+    EXP_ID = sys.argv[1]
+    NUM_EPOCHS = int(sys.argv[2])
+    CHECKPOINT_TYPE = sys.argv[3]
+    CHECKPOINT_PATH = os.path.abspath(sys.argv[4])
 
 def get_transform(train):
     transforms = []
@@ -35,7 +45,7 @@ def get_transform(train):
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
 
-def get_model(num_classes, checkpoint_path):
+def get_model(num_classes):
 
     backbone = models_vit.__dict__['vit_base_patch16'](
         img_size=512,
@@ -45,16 +55,6 @@ def get_model(num_classes, checkpoint_path):
     # test_img = torch.randn(1, 3, 224, 224)
     # test_out = backbone.forward_features(test_img)
     # print(test_out.size())
-
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
-    print("Load pre-trained checkpoint from: %s" % checkpoint_path)
-    checkpoint_model = checkpoint['model']
-    utils.interpolate_pos_embed(backbone, checkpoint_model)
-
-    # load pre-trained model
-    msg = backbone.load_state_dict(checkpoint_model, strict=False)
-    assert len(msg.missing_keys) == 0
-    # print(msg)
 
     backbone_with_fpn = models_vit.MyFPN(backbone)
 
@@ -83,6 +83,18 @@ def get_model(num_classes, checkpoint_path):
         fixed_size=(512, 512),
     )
 
+    # load checkpoint
+    checkpoint = torch.load(CHECKPOINT_PATH, map_location='cpu')
+    print(f'Load {CHECKPOINT_TYPE} checkpoint from: {CHECKPOINT_PATH}')
+    checkpoint_model = checkpoint['model']
+    utils.interpolate_pos_embed(model.backbone.backbone, checkpoint_model)
+    if CHECKPOINT_TYPE == 'pretrained':
+        msg = model.backbone.backbone.load_state_dict(checkpoint_model, strict=False)
+    else:
+        msg = model.load_state_dict(checkpoint_model)
+        print('Loading status:', msg)
+    assert len(msg.missing_keys) == 0    
+
     return model
 
 def main():
@@ -93,20 +105,14 @@ def main():
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    if len(sys.argv) == 1:
-        exp_id, num_epochs, checkpoint_path = 'test', 1, './checkpoints/pretrain-mae-base-80.pth'
-    else:
-        exp_id, num_epochs, checkpoint_path = sys.argv[1], int(sys.argv[2]), os.path.abspath(sys.argv[3])
-
     num_classes = 100
     train_dataset = LabeledDataset(root='/labeled', split="training", transforms=get_transform(train=True))
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_dataset = LabeledDataset(root='/labeled', split="validation", transforms=get_transform(train=False))
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=2, collate_fn=utils.collate_fn)
-    print(f'exp_id={exp_id}; seed={seed}; batch_size=2; num_epochs={num_epochs}; device={device}.')
+    print(f'exp_id={EXP_ID}; seed={seed}; batch_size=2; num_epochs={NUM_EPOCHS}; device={device}.')
 
-    # checkpoint_path = '/scratch/hl3797/DL-S2022/Deep-Learning-S22/checkpoints/mae-base-80.pth'
-    model = get_model(num_classes, checkpoint_path)
+    model = get_model(num_classes)
     model_without_ddp = model
     model.to(device)
     print(model)
@@ -115,7 +121,7 @@ def main():
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
     # print('optimizer:', optimizer)
 
-    for epoch in range(num_epochs):
+    for epoch in range(NUM_EPOCHS):
         # train for one epoch, printing every 10 iterations
         train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=500)
         # update the learning rate
@@ -129,7 +135,7 @@ def main():
             'optimizer': optimizer.state_dict(),
             'epoch': epoch
         }
-        torch.save(to_save, os.path.abspath(f'./checkpoints/{exp_id}-{epoch}.pth'))
+        torch.save(to_save, os.path.abspath(f'./checkpoints/{EXP_ID}-{epoch}.pth'))
 
     print("That's it!")
 
