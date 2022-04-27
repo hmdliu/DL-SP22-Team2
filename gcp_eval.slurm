@@ -12,10 +12,6 @@
 #SBATCH --exclusive
 #SBATCH --requeue
 
-# exp setting
-exp_id=$1
-checkpoint_path=$2
-
 # evaluation
 singularity exec --nv \
 --bind /scratch \
@@ -24,5 +20,5 @@ singularity exec --nv \
 /share/apps/images/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
 /bin/bash -c "
 source /ext3/env.sh
-python eval.py ${exp_id} ${checkpoint_path} > eval_${exp_id}.log 2>&1
+python eval.py $1 > eval_$1.log 2>&1
 "

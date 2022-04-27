@@ -207,7 +207,7 @@ class FeaturePyramidNetwork(nn.Module):
         return out
 
 
-class LastLevelMaxPool(ExtraFPNBlock):
+class OneLevelMaxPool(ExtraFPNBlock):
     """
     Applies a max_pool2d on top of the last feature map
     """
@@ -222,6 +222,21 @@ class LastLevelMaxPool(ExtraFPNBlock):
         x.append(F.max_pool2d(x[-1], 1, 2, 0))
         return x, names
 
+class TwoLevelMaxPool(ExtraFPNBlock):
+    """
+    Applies two max_pool2d on top of the last feature map
+    """
+
+    def forward(
+        self,
+        x: List[Tensor],
+        y: List[Tensor],
+        names: List[str],
+    ) -> Tuple[List[Tensor], List[str]]:
+        names += ['pool1', 'pool2']
+        x.append(F.max_pool2d(x[-1], 1, 2, 0))
+        x.append(F.max_pool2d(x[-1], 1, 2, 0))
+        return x, names
 
 class LastLevelP6P7(ExtraFPNBlock):
     """

@@ -38,7 +38,7 @@ class Norm2d(nn.Module):
 # ViTDet FPN by Kaiming He
 # Reference: https://github.com/ViTAE-Transformer/ViTDet/blob/main/mmdet/models/backbones/vit.py
 class MyFPN(nn.Module):
-    def __init__(self, backbone, embed_dim=768, out_dim=256):
+    def __init__(self, backbone, embed_dim=768, out_dim=256, extra_pool=2):
         super().__init__()
         self.backbone = backbone
         self.fpn1 = nn.Sequential(
@@ -57,22 +57,10 @@ class MyFPN(nn.Module):
             in_channels_list=[768, 768, 768, 768],
             out_channels=256,
             norm_layer=Norm2d,
-            extra_blocks=LastLevelMaxPool()
+            extra_blocks=TwoLevelMaxPool() if extra_pool == 2 else OneLevelMaxPool()
         )
 
         self.out_channels = out_dim
-
-        # self.inner_blocks = nn.ModuleList()
-        # self.layer_blocks = nn.ModuleList()
-        # for i in range(4):
-        #     self.inner_blocks.append(Conv2dNormActivation(embed_dim, out_dim, kernel_size=1, padding=0, norm_layer=Norm2d, activation_layer=None))
-        #     self.layer_blocks.append(Conv2dNormActivation(embed_dim, out_dim, kernel_size=3, norm_layer=Norm2d, activation_layer=None))
-
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-        #         nn.init.kaiming_uniform_(m.weight, a=1)
-        #         if m.bias is not None:
-        #             nn.init.constant_(m.bias, 0)
     
     def forward_features(self, x):
         # forward backbone

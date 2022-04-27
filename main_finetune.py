@@ -4,38 +4,37 @@
 
 import os
 import sys
-import pdb
+import yaml
+import random
 import numpy as np
-from collections import OrderedDict
+from addict import Dict
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import torch.backends.cudnn as cudnn
 
 import torchvision
 from torchvision.ops import MultiScaleRoIAlign
+from torchvision.models.detection.faster_rcnn import FasterRCNN
 from torchvision.models.detection.anchor_utils import AnchorGenerator
-from torchvision.models.detection.mask_rcnn import MaskRCNN, MaskRCNNPredictor
 from torchvision.models.detection.transform import GeneralizedRCNNTransform
-from torchvision.models.detection.faster_rcnn import FasterRCNN, FastRCNNPredictor
 
 import models_vit
 from engine_finetune import train_one_epoch, evaluate
 
 import utils
 import transforms as T
-from dataset import UnlabeledDataset, LabeledDataset
+from dataset import LabeledDataset
 
-if len(sys.argv) == 1:
-    EXP_ID = 'test'
-    NUM_EPOCHS = 1
-    CHECKPOINT_TYPE = 'pretrained'
-    CHECKPOINT_PATH = './checkpoints/pretrain-mae-base-80.pth'
-else:
-    EXP_ID = sys.argv[1]
-    NUM_EPOCHS = int(sys.argv[2])
-    CHECKPOINT_TYPE = sys.argv[3]
-    CHECKPOINT_PATH = os.path.abspath(sys.argv[4])
+EXP_ID = sys.argv[1]
+
+def init_seed(seed):
+    cudnn.benchmark = False
+    cudnn.deterministic = True
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    random.seed(seed)
 
 def get_transform(train):
     transforms = []
@@ -45,34 +44,41 @@ def get_transform(train):
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
 
-def get_model(num_classes):
+def get_model(args):
 
+    # init backbone
     backbone = models_vit.__dict__['vit_base_patch16'](
         img_size=512,
-        num_classes=num_classes,
+        num_classes=args.num_classes,
         drop_path_rate=0.1
     )
     # test_img = torch.randn(1, 3, 224, 224)
     # test_out = backbone.forward_features(test_img)
     # print(test_out.size())
 
-    backbone_with_fpn = models_vit.MyFPN(backbone)
-
+    # build fpn network
+    backbone_with_fpn = models_vit.MyFPN(
+        backbone=backbone,
+        embed_dim=args.embed_dim,
+        out_dim=args.out_dim,
+        extra_pool=args.extra_pool
+    )
     test_img = torch.randn(1, 3, 512, 512)
     test_out = backbone_with_fpn(test_img)
     print('Test FPN:', [v.size() for k, v in test_out.items()])
 
+    # wrap up detector
     model = FasterRCNN(
         backbone=backbone_with_fpn,
-        num_classes=num_classes,
+        num_classes=args.num_classes,
         rpn_anchor_generator=AnchorGenerator(
-            sizes=((16,), (32,), (64,), (128,), (256,)),
-            aspect_ratios=((0.5, 1.0, 2.0),) * 5
+            sizes=tuple((s,) for s in args.anchor_sizes),
+            aspect_ratios=args.anchor_aspect_ratios * len(args.anchor_sizes)
         ),
         box_roi_pool=MultiScaleRoIAlign(
-            featmap_names=["0", "1", "2", "3", "pool"],
-            output_size=8,
-            sampling_ratio=2
+            featmap_names=args.roi_align_feats,
+            output_size=args.roi_align_output_size,
+            sampling_ratio=args.roi_align_sampling_ratio
         )
     )
     model.transform = GeneralizedRCNNTransform(
@@ -84,11 +90,11 @@ def get_model(num_classes):
     )
 
     # load checkpoint
-    checkpoint = torch.load(CHECKPOINT_PATH, map_location='cpu')
-    print(f'Load {CHECKPOINT_TYPE} checkpoint from: {CHECKPOINT_PATH}')
+    checkpoint = torch.load(args.checkpoint_path, map_location='cpu')
+    print(f'Load {args.checkpoint_type} checkpoint from: {args.checkpoint_path}')
     checkpoint_model = checkpoint['model']
     utils.interpolate_pos_embed(model.backbone.backbone, checkpoint_model)
-    if CHECKPOINT_TYPE == 'pretrained':
+    if args.checkpoint_type == 'pretrained':
         msg = model.backbone.backbone.load_state_dict(checkpoint_model, strict=False)
     else:
         msg = model.load_state_dict(checkpoint_model)
@@ -99,43 +105,71 @@ def get_model(num_classes):
 
 def main():
     
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    # init config
+    config_path = os.path.abspath(f'./configs/{EXP_ID}.yaml')
+    assert os.path.isfile(config_path)
+    args = Dict(yaml.safe_load(open(config_path)))
+    print('Loading Args:')
+    for k, v in args.items():
+        print(f'[{k}]: {v}')
 
-    seed = 42
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+    # init training
+    init_seed(args.seed)
+    cuda_flag = torch.cuda.is_available() and (args.device == 'cuda')
+    args.device = torch.device('cuda') if cuda_flag else torch.device('cpu')
 
-    num_classes = 100
+    # init dataloaders
     train_dataset = LabeledDataset(root='/labeled', split="training", transforms=get_transform(train=True))
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=2, collate_fn=utils.collate_fn)
     valid_dataset = LabeledDataset(root='/labeled', split="validation", transforms=get_transform(train=False))
-    valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=2, shuffle=False, num_workers=2, collate_fn=utils.collate_fn)
-    print(f'exp_id={EXP_ID}; seed={seed}; batch_size=2; num_epochs={NUM_EPOCHS}; device={device}.')
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        collate_fn=utils.collate_fn
+    )
+    valid_loader = torch.utils.data.DataLoader(
+        dataset=valid_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=args.num_workers,
+        collate_fn=utils.collate_fn
+    )
 
-    model = get_model(num_classes)
-    model_without_ddp = model
-    model.to(device)
+    # init model
+    model = get_model(args)
+    model.to(args.device)
     print(model)
 
-    optimizer = torch.optim.AdamW(utils.get_params(model, mode='decay'), lr=1e-4)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+    # init optimizer & scheduler
+    optimizer = torch.optim.AdamW(utils.get_params(model, mode=args.optim_mode), lr=args.lr)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.scheduler_step_size, gamma=args.scheduler_gamma)
     # print('optimizer:', optimizer)
 
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(1, args.num_epochs+1):
         # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, train_loader, device, epoch, print_freq=500)
+        train_one_epoch(
+            model=model,
+            optimizer=optimizer,
+            data_loader=train_loader,
+            device=args.device,
+            epoch=epoch,
+            print_freq=args.train_print_freq,
+            warmup_iter=args.warmup_iter
+        )
         # update the learning rate
         lr_scheduler.step()
         # evaluate on the test dataset
-        evaluate(model, valid_loader, device=device)
+        evaluate(model, valid_loader, device=args.device)
 
         # save checkpoint
-        to_save = {
-            'model': model_without_ddp.state_dict(),
-            'optimizer': optimizer.state_dict(),
-            'epoch': epoch
-        }
-        torch.save(to_save, os.path.abspath(f'./checkpoints/{EXP_ID}-{epoch}.pth'))
+        if epoch >= args.export_bound:
+            to_save = {
+                'model': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'epoch': epoch
+            }
+            torch.save(to_save, os.path.abspath(f'./checkpoints/{args.exp_id}-{epoch}.pth'))
 
     print("That's it!")
 

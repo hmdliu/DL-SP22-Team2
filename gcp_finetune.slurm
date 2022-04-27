@@ -12,12 +12,6 @@
 #SBATCH --exclusive
 #SBATCH --requeue
 
-# exp setting
-exp_id=$1
-num_epochs=$2
-checkpoint_type=$3
-checkpoint_path=$4
-
 mkdir /tmp/$USER
 export SINGULARITY_CACHEDIR=/tmp/$USER
 
@@ -33,5 +27,5 @@ singularity exec --nv \
 /share/apps/images/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
 /bin/bash -c "
 source /ext3/env.sh
-python main_finetune.py ${exp_id} ${num_epochs} ${checkpoint_type} ${checkpoint_path} > ${exp_id}.log 2>&1
+python main_finetune.py $1 > $1.log 2>&1
 "
