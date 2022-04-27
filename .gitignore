@@ -9,7 +9,6 @@ tmp/
 *.out
 *.err
 *.txt
-*.yaml
 *.zip
 *.csv
 *.pickle
