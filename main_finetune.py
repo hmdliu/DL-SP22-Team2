@@ -68,12 +68,14 @@ def get_model(args):
     print('Test FPN:', [v.size() for k, v in test_out.items()])
 
     # wrap up detector
+    sizes = tuple((s,) for s in args.anchor_sizes)
+    aspect_ratios = tuple(tuple(args.anchor_aspect_ratios) for i in range(len(sizes)))
     model = FasterRCNN(
         backbone=backbone_with_fpn,
         num_classes=args.num_classes,
         rpn_anchor_generator=AnchorGenerator(
-            sizes=tuple((s,) for s in args.anchor_sizes),
-            aspect_ratios=args.anchor_aspect_ratios * len(args.anchor_sizes)
+            sizes=sizes,
+            aspect_ratios=aspect_ratios
         ),
         box_roi_pool=MultiScaleRoIAlign(
             featmap_names=args.roi_align_feats,
