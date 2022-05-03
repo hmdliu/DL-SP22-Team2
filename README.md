@@ -1,13 +1,11 @@
 # Deep Learning Final Competition - Team 2
 
-**References: competition start code, [MAE](https://github.com/facebookresearch/mae), and [ViTDet](https://github.com/ViTAE-Transformer/ViTDet).**
-
 ---
 
 ## Group Members
-- Hammond Liu
-- Wenbin Qi
-- Harry Lee
+- Hammond Liu (hl3797)
+- Wenbin Qi (wq372)
+- Harry Lee (hl3794)
 
 ---
 
@@ -29,11 +27,11 @@ git clone https://github.com/hmdliu/DL-SP22-Team2 && cd DL-SP22-Team2
 
 ---
 
-## MAE Pre-training
+## Pre-training: Masked Autoencoder (MAE)
 By default, we use a per device batch size of 64 and train on 4 GPUs. The pre-training configs are specified in *main_pretrain.py*. Since jobs on GCP have a 24 hours time limit, *gcp_pretrain_day2.slurm* demonstrates how to resume from checkpoints. In this competition, we pre-train for 80 epochs in total.
 ```
 # switch to codebase root
-cd cd /scratch/$USER/DL-SP22-Team2
+cd /scratch/$USER/DL-SP22-Team2
 
 # before you start: modify the account in the slurm scripts
 
@@ -56,11 +54,11 @@ cp ./output_dir/mae-day2/checkpoint-80.pth ./checkpoints/pretrain-mae-base-80.pt
 
 ---
 
-## ViTDet FPN + Faster R-CNN Fine-tuning
+## Fine-tuning: ViTDet FPN & Faster R-CNN 
 In the fine-tuning stage, we first freeze the backbone and train the newly appended FPN and detection head for 20 epochs. Then, we use a per-layer decayed learning rate and a strong jitter transform to further fine-tune the whole model. Again, due to the job time constraint on GCP, we resume from checkpoints do the second step iteratively.
 ```
 # switch to codebase root
-cd cd /scratch/$USER/DL-SP22-Team2
+cd /scratch/$USER/DL-SP22-Team2
 
 # before you start: modify the account in the slurm scripts
 
@@ -85,10 +83,11 @@ sbatch gcp_finetune.slurm ft_resume_3
 # => Checkpoints: ./checkpoints/ft_resume_3-[epoch_num].pth
 
 # => final fine-tuned weights: ./checkpoints/ft_resume_3-[best_epoch].pth
-# => expected best mAP for [ft_freeze]: ~0.151
-# => expected best mAP for [ft_resume_1]: ~0.294
-# => expected best mAP for [ft_resume_2]: ~0.314
-# => expected best mAP for [ft_resume_3]: ~0.320
+# => expected best mAP:
+# => [ft_freeze]: ~0.151
+# => [ft_resume_1]: ~0.294
+# => [ft_resume_2]: ~0.314
+# => [ft_resume_3]: ~0.320
 ```
 
 ---
@@ -96,12 +95,12 @@ sbatch gcp_finetune.slurm ft_resume_3
 ## Evaluation
 ```
 # switch to codebase root
-cd cd /scratch/$USER/DL-SP22-Team2
+cd /scratch/$USER/DL-SP22-Team2
 
 # before you start: modify the account in the slurm scripts
 
-# set the checkpoint arg in ./configs/eval.yaml
-sbatch gcp_finetune.slurm eval
+# set a checkpoint path in ./configs/eval.yaml
+sbatch gcp_eval.slurm eval
 # => Output logs: ./eval.log
 ```
 
@@ -109,3 +108,11 @@ sbatch gcp_finetune.slurm eval
 
 ## Supplementary Materials
 You can find our training logs and checkpoints via [this link](https://drive.google.com/drive/folders/1Y1P4y313Ey0sdvBuDaPzXFD7oIMw6-hV?usp=sharing).
+
+---
+
+## References
+- [MAE](https://github.com/facebookresearch/mae)
+- [ViTDet](https://github.com/ViTAE-Transformer/ViTDet)
+- Competition start code
+- Source code of torchvision

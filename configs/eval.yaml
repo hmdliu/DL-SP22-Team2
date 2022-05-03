@@ -3,7 +3,7 @@ exp_id: eval
 
 # checkpoint
 checkpoint_type: finetuned
-checkpoint_path: ./checkpoints/finetune/[eval_checkpoint].pth
+checkpoint_path: ./checkpoints/[eval_checkpoint].pth
 
 # data
 seed: 42
