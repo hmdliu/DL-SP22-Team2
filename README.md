@@ -28,11 +28,8 @@ git clone https://github.com/hmdliu/DL-SP22-Team2 && cd DL-SP22-Team2
 ---
 
 ## Pre-training: Masked Autoencoder (MAE)
-By default, we use a per device batch size of 64 and train on 4 GPUs. The pre-training configs are specified in *main_pretrain.py*. Since jobs on GCP have a 24 hours time limit, *gcp_pretrain_day2.slurm* demonstrates how to resume from checkpoints. In this competition, we pre-train for 80 epochs in total.
+By default, we use a per device batch size of 64 and train on 4 GPUs. The pre-training configs are specified in *main_pretrain.py*. Since jobs on GCP have a 24-hour time limit, we may need to resume from checkpoints while training (demonstrated in *gcp_pretrain_day2.slurm*). In this competition, we pre-train for 80 epochs in total.
 ```
-# switch to codebase root
-cd /scratch/$USER/DL-SP22-Team2
-
 # before you start: modify the account in the slurm scripts
 
 # pre-training day 1 (~40 epochs)
@@ -41,7 +38,7 @@ sbatch gcp_pretrain_day1.slurm
 # => Output dir: ./output_dir/mae-day1
 
 # pre-training day 2 (~40 epochs)
-# by default, this loads: ./output_dir/mae-day1/checkpoint-40.pth
+# by default, we resume from: ./output_dir/mae-day1/checkpoint-40.pth
 sbatch gcp_pretrain_day2.slurm
 # => Output logs: mae-day2.out & mae-day2.err
 # => Output dir: ./output_dir/mae-day2
@@ -57,9 +54,6 @@ cp ./output_dir/mae-day2/checkpoint-80.pth ./checkpoints/pretrain-mae-base-80.pt
 ## Fine-tuning: ViTDet FPN & Faster R-CNN 
 In the fine-tuning stage, we first freeze the backbone and train the newly appended FPN and detection head for 20 epochs. Then, we use a per-layer decayed learning rate and a strong jitter transform to further fine-tune the whole model. Again, due to the job time constraint on GCP, we resume from checkpoints do the second step iteratively.
 ```
-# switch to codebase root
-cd /scratch/$USER/DL-SP22-Team2
-
 # before you start: modify the account in the slurm scripts
 
 # fine-tuning with the backbone frozen
@@ -94,12 +88,9 @@ sbatch gcp_finetune.slurm ft_resume_3
 
 ## Evaluation
 ```
-# switch to codebase root
-cd /scratch/$USER/DL-SP22-Team2
-
 # before you start: modify the account in the slurm scripts
 
-# set a checkpoint path in ./configs/eval.yaml
+# set the checkpoint path in ./configs/eval.yaml
 sbatch gcp_eval.slurm eval
 # => Output logs: ./eval.log
 ```

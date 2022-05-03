@@ -18,7 +18,7 @@ use_jitter: false
 lr: 0.0001
 optim_mode: freeze
 scheduler_gamma: 0.1
-scheduler_step_size: 6
+scheduler_step_size: 6  # slightly modified
 
 # training
 num_epochs: 20
