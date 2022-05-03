@@ -21,6 +21,7 @@
 
 ## Clone codebase
 ```
+# On NYU GCP
 cd /scratch/$USER
 git clone https://github.com/hmdliu/DL-SP22-Team2 && cd DL-SP22-Team2
 ```
