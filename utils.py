@@ -1,4 +1,10 @@
 
+# ---------------------------------------------
+# References:
+#   - Competition start code
+#   - https://github.com/facebookresearch/mae
+# ---------------------------------------------
+
 import os
 import math
 import time

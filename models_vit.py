@@ -1,4 +1,10 @@
-# Credits: https://github.com/facebookresearch/mae/blob/main/models_vit.py
+
+# ---------------------------------------------------
+# References:
+#   - torchvision source code
+#   - https://github.com/facebookresearch/mae
+#   - https://github.com/ViTAE-Transformer/ViTDet
+# ---------------------------------------------------
 
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.

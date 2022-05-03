@@ -1,7 +1,5 @@
 
-# Feel free to modifiy this file. 
-# It will only be used to verify the settings are correct 
-# modified from https://pytorch.org/docs/stable/data.html
+# Reference: Competition start code
 
 import os
 import sys

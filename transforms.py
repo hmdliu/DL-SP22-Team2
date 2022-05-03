@@ -1,3 +1,6 @@
+
+# Mainly adopted from competition start code
+
 import random
 import torch
 

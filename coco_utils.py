@@ -1,3 +1,6 @@
+
+# Adopted from competition start code
+
 import copy
 import os
 from PIL import Image

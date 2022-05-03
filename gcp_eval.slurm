@@ -20,5 +20,5 @@ singularity exec --nv \
 /share/apps/images/cuda11.3.0-cudnn8-devel-ubuntu20.04.sif \
 /bin/bash -c "
 source /ext3/env.sh
-python eval.py $1 > eval_$1.log 2>&1
+python eval.py $1 > $1.log 2>&1
 "

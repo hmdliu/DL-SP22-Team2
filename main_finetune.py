@@ -1,6 +1,5 @@
-# Feel free to modifiy this file. 
-# It will only be used to verify the settings are correct 
-# modified from https://pytorch.org/docs/stable/data.html
+
+# Reference: Competition start code
 
 import os
 import sys
@@ -36,11 +35,12 @@ def init_seed(seed):
     torch.cuda.manual_seed_all(seed)
     random.seed(seed)
 
-def get_transform(train):
+def get_transform(train, use_jitter=False):
     transforms = []
     transforms.append(T.ToTensor())
     if train:
-        transforms.append(T.Jitter())
+        if use_jitter:
+            transforms.append(T.Jitter())
         transforms.append(T.RandomHorizontalFlip(0.5))
     return T.Compose(transforms)
 
@@ -121,8 +121,16 @@ def main():
     args.device = torch.device('cuda') if cuda_flag else torch.device('cpu')
 
     # init dataloaders
-    train_dataset = LabeledDataset(root='/labeled', split="training", transforms=get_transform(train=True))
-    valid_dataset = LabeledDataset(root='/labeled', split="validation", transforms=get_transform(train=False))
+    train_dataset = LabeledDataset(
+        root='/labeled',
+        split='training',
+        transforms=get_transform(train=True, use_jitter=args.use_jitter)
+    )
+    valid_dataset = LabeledDataset(
+        root='/labeled',
+        split='validation',
+        transforms=get_transform(train=False)
+    )
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_size=args.batch_size,

@@ -1,3 +1,6 @@
+
+# Adopted from competition start code
+
 import json
 import tempfile
 

@@ -1,16 +1,18 @@
 
-exp_id: finetune_eval
+exp_id: ft_resume_1
 
 # checkpoint
 checkpoint_type: finetuned
-checkpoint_path: ./checkpoints/test.pth
+checkpoint_path: ./checkpoints/[best_checkpoint_from_freeze].pth
 
 # data
 seed: 42
 device: cuda
-batch_size: 4
-num_workers: 4
+batch_size: 2
+num_workers: 2
 num_classes: 100
+warmup_iter: 8000
+use_jitter: true
 
 # optim
 lr: 0.0001
@@ -26,11 +28,11 @@ train_print_freq: 500
 # FPN
 embed_dim: 768
 out_dim: 256
-extra_pool: 2
+extra_pool: 1
 
 # detection
-anchor_sizes: [16, 32, 64, 128, 256, 512]
+anchor_sizes: [32, 64, 128, 256, 512]
 anchor_aspect_ratios: [0.5, 1.0, 2.0]
-roi_align_output_size: 4
-roi_align_feats: ["0", "1", "2", "3", "pool1", "pool2"]
+roi_align_output_size: 8
+roi_align_feats: ["0", "1", "2", "3", "pool"]
 roi_align_sampling_ratio: 2

@@ -1,6 +1,8 @@
-# Code Citation:
-# - https://github.com/pytorch/vision/blob/6d85d74be6ac72b2ac3057d85d8ae0004fa0de3f/torchvision/ops/feature_pyramid_network.py
-# - https://github.com/pytorch/vision/blob/6d85d74be6ac72b2ac3057d85d8ae0004fa0de3f/torchvision/ops/misc.py
+
+# ---------------------------------------------------
+# References:
+#   - torchvision source code (ops & FPN)
+# ---------------------------------------------------
 
 import warnings
 from collections import OrderedDict
